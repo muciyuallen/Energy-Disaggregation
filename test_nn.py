@@ -78,51 +78,91 @@ output_dim = 1
 layers = [input_dim, layer1_dim, layer2_dim, output_dim]
 nn_model = build_nn_model(layers)
 
-adam = Adam(lr = 0.001)
-nn_model.compile(loss='mean_squared_error', optimizer=adam)
-nn_model.fit( X_train1, y_train1,
-                    batch_size=512, verbose=1, nb_epoch=50,
-                    validation_split=0.33)
 
-#hold place forr time.time()
-# # checkpointer = ModelCheckpoint(filepath="./fc_refrig_h1_2_new.hdf5", verbose=0, save_best_only=True)
-# hist_fc_1 = nn_model.fit( X_train1, y_train1,
-#                     batch_size=512, verbose=1, nb_epoch=100,
-#                     validation_split=0.33)
+lr = [0.0001, 0.001, 0.005, 0.01, 0.05 , 0.1, 0.5]
+H1_MSE = []
+H1_MAE = []
+H2_MSE = []
+H2_MAE = []
 
-# nn_model = load_model('fc_refrig_h1_2_new.hdf5')
-pred_fc_1 = nn_model.predict(X_test1).reshape(-1)
-mse_loss_fc_1 = mse_loss(pred_fc_1, y_test1)
-mae_loss_fc_1 = mae_loss(pred_fc_1, y_test1)
-print('Mean square error on test set: ', mse_loss_fc_1)
-print('Mean absolute error on the test set: ', mae_loss_fc_1)
+TRAIN_LOSS = []
+VAL_LOSS = []
+for r in lr: 
+	adam = Adam(lr = r)
+	nn_model.compile(loss='mean_squared_error', optimizer=adam)
+	nn_model.fit( X_train1, y_train1,
+	                    batch_size=512, verbose=1, nb_epoch=100,
+	                    validation_split=0.33)
 
+	#hold place forr time.time()
+	# checkpointer = ModelCheckpoint(filepath="./fc_refrig_h1_2_new.hdf5", verbose=0, save_best_only=True)
+	train_loss = nn_model.history['loss']
+	val_loss = nn_model.history['val_loss']
 
-output_path = 'results/'
-#output the test results of the model on same house
-SH_result_df = pd.DataFrame()
-SH_result_df['time'] = df_test['Unnamed: 0']
-SH_result_df['y_true'] = y_test1
-SH_result_df['y_pred'] = pred_fc_1
-
-
-SH_result_df.to_csv(output_path+'H1_OS_%s_results.csv'%app)
-
-app2 = 'refrigerator_9'
-#apply the trained model on different house
-df2 = pd.read_csv(path + 'H2_test_full.csv')
-X_test2 = df2[['mains_1','mains_2']].values
-y_test2 = df2[app2].values
-
-pred_fc_2 = nn_model.predict(X_test2).reshape(-1)
-
-DH_result_df = pd.DataFrame()
-DH_result_df['time'] = df2['Unnamed: 0']
-DH_result_df['y_true'] = y_test2
-DH_result_df['y_pred'] = pred_fc_2
+	# nn_model = load_model('fc_refrig_h1_2_new.hdf5')
+	pred_fc_1 = nn_model.predict(X_test1).reshape(-1)
+	mse_loss_fc_1 = mse_loss(pred_fc_1, y_test1)
+	mae_loss_fc_1 = mae_loss(pred_fc_1, y_test1)
+	print('Results of testing the model in House 1')
+	print('Mean square error on test set: ', mse_loss_fc_1)
+	print('Mean absolute error on the test set: ', mae_loss_fc_1)
 
 
-DH_result_df.to_csv(output_path+'H2_OS_%s_results.csv'%app)
+	# output_path = 'results/'
+	# #output the test results of the model on same house
+	# SH_result_df = pd.DataFrame()
+	# SH_result_df['time'] = df_test['Unnamed: 0']
+	# SH_result_df['y_true'] = y_test1
+	# SH_result_df['y_pred'] = pred_fc_1
 
+
+	# SH_result_df.to_csv(output_path+'H1_OS_%s_results.csv'%app)
+
+	app2 = 'refrigerator_9'
+	#apply the trained model on different house
+	df2 = pd.read_csv(path + 'H2_test_full.csv')
+	X_test2 = df2[['mains_1','mains_2']].values
+	y_test2 = df2[app2].values
+
+
+	pred_fc_2 = nn_model.predict(X_test2).reshape(-1)
+
+
+	mse_loss_fc_2 = mse_loss(pred_fc_2, y_test2)
+	mae_loss_fc_2 = mae_loss(pred_fc_2, y_test2)
+	print('Results of testing the model in House 2')
+	print('Mean square error on test set: ', mse_loss_fc_2)
+	print('Mean absolute error on the test set: ', mae_loss_fc_2)
+
+	# DH_result_df = pd.DataFrame()
+	# DH_result_df['time'] = df2['Unnamed: 0']
+	# DH_result_df['y_true'] = y_test2
+	# DH_result_df['y_pred'] = pred_fc_2
+
+
+	# DH_result_df.to_csv(output_path+'H2_OS_%s_results.csv'%app)
+
+	H1_MSE.append(mse_loss_fc_1)
+	H1_MAE.append(mae_loss_fc_1)
+	H2_MSE.append(mse_loss_fc_2)
+	H2_MAE.append(mae_loss_fc_2)
+	TRAIN_LOSS.append(train_loss)
+	VAL_LOSS.append(val_loss)
+
+
+
+out_list = [lr, H1_MSE,H1_MAE, H2_MSE, H2_MAE]
+column_names = ['lr', 'H1_MSE', 'H1_MAE', 'H2_MSE', 'H2_MAE']
+output = pd.DataFrame(np.array(out_list).T)
+output.columns = column_names
+output.to_csv('results/LR_LOSS_epoch100.csv')
+column_names2 = ['lr_%s'%r for r in lr]
+tl_df = pd.DataFrame(np.array(TRAIN_LOSS).T)
+tl_df.columns = column_names2
+tl_df.to_csv('results/TRAIN_LOSS_epoch100.csv')
+
+vl_df = pd.DataFrame(np.array(VAL_LOSS).T)
+vl_df.columns = column_names2
+vl_df.to_csv('results/VAL_LOSS_epoch100.csv')
 
 
