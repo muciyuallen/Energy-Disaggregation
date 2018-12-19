@@ -81,7 +81,7 @@ nn_model = build_nn_model(layers)
 adam = Adam(lr = 0.001)
 nn_model.compile(loss='mean_squared_error', optimizer=adam)
 nn_model.fit( X_train1, y_train1,
-                    batch_size=512, verbose=1, nb_epoch=20,
+                    batch_size=512, verbose=1, nb_epoch=50,
                     validation_split=0.33)
 
 #hold place forr time.time()
@@ -111,14 +111,13 @@ SH_result_df.to_csv(output_path+'H1_OS_%s_results.csv'%app)
 app2 = 'refrigerator_9'
 #apply the trained model on different house
 df2 = pd.read_csv(path + 'H2_test_full.csv')
-df2['timestamp'] = pd.to_datetime(df2['Unnamed: 0'])
-X_test2 = df2.set_index('timestamp')[['mains_1','mains_2']].values
+X_test2 = df2[['mains_1','mains_2']].values
 y_test2 = df2[app2].values
 
 pred_fc_2 = nn_model.predict(X_test2).reshape(-1)
 
 DH_result_df = pd.DataFrame()
-DH_result_df['time'] = df2.index.values
+DH_result_df['time'] = df2['Unnamed: 0']
 DH_result_df['y_true'] = y_test2
 DH_result_df['y_pred'] = pred_fc_2
 
